@@ -1,0 +1,1278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reading Quest</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Lora:ital,wght@0,600;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0f1117;
+  --surface: #1a1d27;
+  --surface2: #222638;
+  --border: #2e3348;
+  --gold: #f5c842;
+  --gold-dim: #c49d1f;
+  --teal: #3ecfb2;
+  --coral: #ff6b6b;
+  --text: #e8eaf0;
+  --muted: #7a7f9a;
+  --radius: 14px;
+  --correct: #3ecfb2;
+  --wrong: #ff6b6b;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Nunito', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+/* Stars background */
+body::before {
+  content: '';
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background-image: radial-gradient(1px 1px at 10% 15%, rgba(255,255,255,0.4) 0%, transparent 100%),
+    radial-gradient(1px 1px at 30% 60%, rgba(255,255,255,0.3) 0%, transparent 100%),
+    radial-gradient(1px 1px at 55% 25%, rgba(255,255,255,0.4) 0%, transparent 100%),
+    radial-gradient(1px 1px at 75% 70%, rgba(255,255,255,0.3) 0%, transparent 100%),
+    radial-gradient(1px 1px at 90% 40%, rgba(255,255,255,0.2) 0%, transparent 100%),
+    radial-gradient(1px 1px at 20% 85%, rgba(255,255,255,0.3) 0%, transparent 100%),
+    radial-gradient(1px 1px at 65% 90%, rgba(255,255,255,0.2) 0%, transparent 100%);
+  pointer-events: none; z-index: 0;
+}
+
+.container { max-width: 700px; margin: 0 auto; padding: 0 1.25rem 4rem; position: relative; z-index: 1; }
+
+/* ── Screen system ── */
+.screen { display: none; }
+.screen.active { display: block; animation: fadeUp 0.4s ease both; }
+@keyframes fadeUp { from { opacity:0; transform: translateY(14px); } to { opacity:1; transform: translateY(0); } }
+
+/* ── Header ── */
+.site-header { text-align: center; padding: 3rem 0 2rem; }
+.site-header .eyebrow { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.75rem; }
+.site-header h1 { font-family: 'Lora', serif; font-size: clamp(2.2rem, 6vw, 3.4rem); font-weight: 600; color: var(--text); line-height: 1.1; }
+.site-header h1 span { color: var(--gold); font-style: italic; }
+.site-header p { font-size: 15px; color: var(--muted); margin-top: 0.75rem; line-height: 1.6; }
+
+/* ── Card ── */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.75rem; margin-bottom: 1rem; }
+.card-sm { padding: 1.25rem 1.5rem; }
+
+/* ── Name screen ── */
+.name-label { font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; display: block; }
+.name-input { width: 100%; height: 50px; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 0 16px; font-size: 17px; font-family: 'Nunito', sans-serif; color: var(--text); transition: border-color 0.2s; }
+.name-input:focus { outline: none; border-color: var(--gold); }
+.name-input::placeholder { color: var(--muted); }
+
+/* ── Buttons ── */
+.btn { display: inline-flex; align-items: center; justify-content: center; height: 48px; padding: 0 28px; border-radius: 10px; font-size: 15px; font-weight: 700; font-family: 'Nunito', sans-serif; cursor: pointer; border: none; transition: all 0.15s; }
+.btn-gold { background: var(--gold); color: #111; }
+.btn-gold:hover { background: #f7d35a; transform: translateY(-1px); }
+.btn-gold:active { transform: scale(0.98); }
+.btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+.btn-ghost:hover { border-color: var(--text); color: var(--text); }
+.btn-full { width: 100%; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; }
+
+/* ── Book shelf ── */
+.shelf-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 8px; }
+.shelf-header h2 { font-family: 'Lora', serif; font-size: 20px; color: var(--text); }
+.points-badge { background: var(--surface2); border: 1px solid var(--gold); border-radius: 20px; padding: 5px 14px; font-size: 13px; font-weight: 700; color: var(--gold); }
+
+.book-grid { display: flex; flex-direction: column; gap: 10px; }
+.book-item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem 1.25rem; display: flex; align-items: center; gap: 14px; cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+.book-item:hover { border-color: var(--gold); background: var(--surface2); }
+.book-item.completed { border-color: var(--teal); opacity: 0.7; cursor: default; }
+.book-item.completed:hover { border-color: var(--teal); background: var(--surface); }
+
+.book-emoji { font-size: 28px; width: 44px; text-align: center; flex-shrink: 0; }
+.book-info { flex: 1; }
+.book-title { font-size: 15px; font-weight: 700; color: var(--text); }
+.book-meta { font-size: 12px; color: var(--muted); margin-top: 3px; }
+.book-pts { font-size: 13px; font-weight: 700; color: var(--gold); background: rgba(245,200,66,0.12); padding: 3px 10px; border-radius: 6px; white-space: nowrap; flex-shrink: 0; }
+.book-pts.earned { color: var(--teal); background: rgba(62,207,178,0.12); }
+.book-pts.attempted { color: var(--coral); background: rgba(255,107,107,0.12); }
+
+/* ── Quiz header ── */
+.quiz-top { margin-bottom: 1.5rem; }
+.quiz-book-name { font-family: 'Lora', serif; font-size: 18px; color: var(--text); margin-bottom: 4px; }
+.quiz-sub { font-size: 13px; color: var(--muted); }
+.progress-wrap { height: 5px; background: var(--surface2); border-radius: 3px; margin-top: 10px; overflow: hidden; }
+.progress-fill { height: 100%; background: var(--gold); border-radius: 3px; transition: width 0.4s ease; }
+
+/* ── Question ── */
+.q-num { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); margin-bottom: 10px; }
+.q-text { font-size: 16px; line-height: 1.65; color: var(--text); margin-bottom: 1.25rem; font-weight: 600; }
+.choices { display: flex; flex-direction: column; gap: 8px; }
+.choice { display: flex; align-items: flex-start; gap: 12px; padding: 12px 15px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface2); cursor: pointer; font-family: 'Nunito', sans-serif; font-size: 14px; font-weight: 600; color: var(--text); text-align: left; transition: all 0.15s; line-height: 1.5; }
+.choice:hover:not(:disabled) { border-color: var(--gold); background: rgba(245,200,66,0.07); }
+.choice.selected { border-color: var(--gold); background: rgba(245,200,66,0.12); }
+.choice.correct { border-color: var(--teal); background: rgba(62,207,178,0.12); color: var(--teal); }
+.choice.wrong { border-color: var(--coral); background: rgba(255,107,107,0.12); color: var(--coral); }
+.choice-letter { width: 24px; height: 24px; min-width: 24px; border-radius: 6px; background: var(--border); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; color: var(--muted); margin-top: 1px; transition: all 0.15s; }
+.choice.selected .choice-letter { background: var(--gold); color: #111; }
+.choice.correct .choice-letter { background: var(--teal); color: #111; }
+.choice.wrong .choice-letter { background: var(--coral); color: #fff; }
+
+.feedback { margin-top: 12px; padding: 10px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; display: none; }
+.feedback.show { display: block; }
+.feedback.correct { background: rgba(62,207,178,0.12); color: var(--teal); border: 1px solid rgba(62,207,178,0.3); }
+.feedback.wrong { background: rgba(255,107,107,0.1); color: var(--coral); border: 1px solid rgba(255,107,107,0.3); }
+
+.q-nav { display: flex; justify-content: flex-end; margin-top: 1.25rem; }
+.btn-next { height: 42px; padding: 0 22px; background: var(--gold); color: #111; border: none; border-radius: 9px; font-size: 14px; font-weight: 800; font-family: 'Nunito', sans-serif; cursor: pointer; display: none; transition: all 0.15s; }
+.btn-next.show { display: block; }
+.btn-next:hover { background: #f7d35a; }
+
+/* ── Results ── */
+.results-circle { width: 110px; height: 110px; border-radius: 50%; border: 3px solid var(--gold); background: rgba(245,200,66,0.1); display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 0 auto 1.5rem; }
+.results-score { font-family: 'Lora', serif; font-size: 32px; font-weight: 600; color: var(--gold); line-height: 1; }
+.results-denom { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.results-pass { text-align: center; margin-bottom: 1.5rem; }
+.results-pass h3 { font-family: 'Lora', serif; font-size: 22px; margin-bottom: 6px; }
+.results-pass p { font-size: 14px; color: var(--muted); line-height: 1.6; }
+.pts-earned { text-align: center; background: rgba(62,207,178,0.1); border: 1px solid rgba(62,207,178,0.3); border-radius: 10px; padding: 14px; margin-bottom: 1.5rem; }
+.pts-earned .pts-num { font-family: 'Lora', serif; font-size: 28px; color: var(--teal); font-weight: 600; }
+.pts-earned .pts-label { font-size: 13px; color: var(--teal); opacity: 0.8; margin-top: 2px; }
+.results-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.results-actions .btn { flex: 1; min-width: 140px; }
+
+/* ── History ── */
+.history-item { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.history-item:last-child { border-bottom: none; }
+.h-icon { width: 28px; height: 28px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
+.h-pass { background: rgba(62,207,178,0.15); color: var(--teal); }
+.h-fail { background: rgba(255,107,107,0.12); color: var(--coral); }
+.h-title { flex: 1; color: var(--text); font-weight: 600; }
+.h-score { color: var(--muted); }
+.h-pts { font-weight: 700; }
+.h-pts.earned { color: var(--teal); }
+.h-pts.none { color: var(--muted); }
+
+/* ── Version badge ── */
+.version-dots { display: flex; gap: 5px; margin-top: 5px; }
+.vdot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); }
+.vdot.taken { background: var(--coral); }
+.vdot.next { background: var(--gold); animation: pulse 1.5s ease infinite; }
+@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+
+.error-msg { background: rgba(255,107,107,0.1); border: 1px solid rgba(255,107,107,0.3); color: var(--coral); border-radius: 8px; padding: 10px 14px; font-size: 13px; font-weight: 600; margin-top: 10px; display: none; }
+.error-msg.show { display: block; }
+
+/* ── Passcode screen (typed) ── */
+.pass-input-wrap { position: relative; margin-bottom: 14px; }
+.pass-input { width: 100%; height: 50px; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 0 44px 0 16px; font-size: 20px; font-family: 'Nunito', sans-serif; color: var(--text); letter-spacing: 0.25em; transition: border-color 0.2s; }
+.pass-input:focus { outline: none; border-color: var(--gold); }
+.pass-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--muted); cursor: pointer; font-size: 16px; padding: 4px; }
+
+/* ── Teacher view ── */
+.tv-period-group { margin-bottom: 1.5rem; }
+.tv-period-label { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+.tv-row { display: grid; grid-template-columns: 1fr auto auto auto; gap: 8px 14px; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(46,51,72,0.5); font-size: 13px; }
+.tv-row:last-child { border-bottom: none; }
+.tv-name { font-weight: 600; color: var(--text); }
+.tv-books { color: var(--muted); font-size: 12px; }
+.tv-pts { font-weight: 700; color: var(--gold); min-width: 60px; text-align: right; }
+.tv-badge { font-size: 11px; padding: 2px 8px; border-radius: 5px; font-weight: 700; }
+.tv-badge.pass { background: rgba(62,207,178,0.15); color: var(--teal); }
+.tv-badge.fail { background: rgba(255,107,107,0.1); color: var(--coral); }
+.tv-empty { color: var(--muted); font-size: 14px; padding: 1rem 0; text-align: center; }
+.tv-meta { font-size: 12px; color: var(--muted); margin-bottom: 1.25rem; }
+.tv-search { width: 100%; height: 40px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 0 12px; font-size: 13px; font-family: 'Nunito', sans-serif; color: var(--text); margin-bottom: 1.25rem; }
+.tv-search:focus { outline: none; border-color: var(--gold); }
+.tv-stat-row { display: flex; gap: 10px; margin-bottom: 1.25rem; flex-wrap: wrap; }
+.tv-stat { flex: 1; min-width: 100px; background: var(--surface2); border-radius: 10px; padding: 12px; text-align: center; }
+.tv-stat-num { font-family: 'Lora', serif; font-size: 22px; color: var(--gold); }
+.tv-stat-label { font-size: 11px; color: var(--muted); margin-top: 3px; }
+
+@media(max-width:480px) {
+  .card { padding: 1.25rem; }
+  .results-actions { flex-direction: column; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- ── PASSCODE SCREEN (with student selection) ── -->
+<div id="screen-passcode" class="screen active">
+  <div class="site-header">
+    <div class="eyebrow">6th Grade Reading Program</div>
+    <h1>Reading <span>Quest</span></h1>
+    <p>Prove you read it. Earn your points.</p>
+  </div>
+  <div class="card" style="max-width:420px; margin:0 auto;">
+
+    <label class="name-label" for="periodSelect">Select your class period</label>
+    <select id="periodSelect" class="name-input" onchange="onPeriodChange()" style="cursor:pointer; margin-bottom:12px;">
+      <option value="">— Choose a period —</option>
+    </select>
+
+    <div id="nameSelectWrap" style="display:none; margin-bottom:12px;">
+      <label class="name-label" for="nameSelect">Select your name</label>
+      <select id="nameSelect" class="name-input" style="cursor:pointer;">
+        <option value="">— Choose your name —</option>
+      </select>
+    </div>
+
+    <div id="passcodeWrap" style="display:none;">
+      <label class="name-label" style="margin-top:4px;">Teacher enters passcode</label>
+      <div class="pass-input-wrap">
+        <input type="password" id="passcodeInput" class="pass-input" placeholder="••••••••••••" autocomplete="off" />
+        <button class="pass-toggle" onclick="togglePassVis()" id="passToggle">👁</button>
+      </div>
+    </div>
+
+    <div class="error-msg" id="passcodeError" style="margin-top:10px;"></div>
+    <div style="margin-top:14px;">
+      <button class="btn btn-gold btn-full" id="enterBtn" onclick="handleEnter()" disabled>Select your name to continue</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── NAME / PERIOD SCREEN (kept for compatibility, never shown) ── -->
+<div id="screen-name" class="screen" style="display:none !important;"></div>
+
+<!-- ── SHELF SCREEN ── -->
+<div id="screen-shelf" class="screen">
+  <div class="site-header" style="padding-top:2rem;">
+    <div class="eyebrow" id="shelfGreeting"></div>
+    <h1>Your <span>Library</span></h1>
+  </div>
+  <div class="shelf-header">
+    <h2>Choose a book to quiz</h2>
+    <div class="points-badge">⭐ <span id="totalPoints">0</span> pts total</div>
+  </div>
+  <div class="book-grid" id="bookGrid"></div>
+  <div style="margin-top:1.5rem;">
+    <button class="btn btn-ghost" onclick="showHistory()" style="font-size:13px; height:38px; padding:0 16px;">View attempt history</button>
+  </div>
+</div>
+
+<!-- ── QUIZ SCREEN ── -->
+<div id="screen-quiz" class="screen">
+  <div style="padding-top:1.5rem;" class="quiz-top">
+    <div class="quiz-book-name" id="quizBookName"></div>
+    <div class="quiz-sub" id="quizSub"></div>
+    <div class="progress-wrap"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+  </div>
+  <div class="card" id="questionCard"></div>
+</div>
+
+<!-- ── RESULTS SCREEN ── -->
+<div id="screen-results" class="screen">
+  <div style="padding-top:1.5rem;"></div>
+  <div class="card" style="text-align:center;">
+    <div class="results-circle">
+      <div class="results-score" id="resScore"></div>
+      <div class="results-denom" id="resDenom"></div>
+    </div>
+    <div class="results-pass">
+      <h3 id="resTitle"></h3>
+      <p id="resMsg"></p>
+    </div>
+    <div class="pts-earned" id="ptsBox" style="display:none;">
+      <div class="pts-num" id="resPts"></div>
+      <div class="pts-label" id="resPtsLabel"></div>
+    </div>
+    <div class="results-actions">
+      <button class="btn btn-ghost" onclick="goShelf()">Back to library</button>
+      <button class="btn btn-gold" id="retryBtn" onclick="retryQuiz()">Try again</button>
+      <button class="btn btn-ghost" onclick="goHome()" style="width:100%; margin-top:6px; font-size:13px;">Done — next student</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── HISTORY SCREEN ── -->
+<div id="screen-history" class="screen">
+  <div style="padding-top:1.5rem; margin-bottom:1rem; display:flex; align-items:center; gap:12px;">
+    <button class="btn btn-ghost" style="height:36px;padding:0 14px;font-size:13px;" onclick="goShelf()">← Back</button>
+    <span style="font-family:'Lora',serif; font-size:18px;">Attempt History</span>
+  </div>
+  <div class="card">
+    <div id="historyList"></div>
+  </div>
+</div>
+
+<!-- ── TEACHER VIEW SCREEN ── -->
+<div id="screen-teacher" class="screen">
+  <div style="padding-top:1.5rem; margin-bottom:1rem; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+    <span style="font-family:'Lora',serif; font-size:20px;">Teacher Dashboard</span>
+    <button class="btn btn-ghost" style="height:36px;padding:0 14px;font-size:13px;" onclick="showScreen('screen-passcode')">← Exit</button>
+  </div>
+  <div class="tv-stat-row" id="tvStats"></div>
+  <input type="text" class="tv-search" id="tvSearch" placeholder="Search student name..." oninput="renderTeacherView()">
+  <div id="tvContent"></div>
+</div>
+
+</div><!-- /container -->
+
+<script>
+// ════════════════════════════════════════════
+// BOOK DATA + POINT VALUES
+// ════════════════════════════════════════════
+const BOOKS = [
+  {
+    id: "hatchet",
+    title: "Hatchet",
+    author: "Gary Paulsen",
+    emoji: "🪓",
+    points: 200,
+    lexile: "1020L",
+    pages: 192,
+    quizzes: [
+      // ── QUIZ 1 ──
+      [
+        { q: "What gift does Brian's mother give him just before he leaves for his father's in Canada?", choices: ["A compass","A hunting knife","A hatchet","A first-aid kit"], answer: 2 },
+        { q: "What is the 'secret' that haunts Brian throughout the novel?", choices: ["He failed his final exams before summer","He saw his mother with another man before the divorce","He lost his father's watch on the plane","He burned down part of his school"], answer: 1 },
+        { q: "How does Brian land the plane after the pilot's heart attack?", choices: ["He radios a tower and follows instructions","He follows a road until he spots a field","He steers toward a lake and crashes into the water","He activates the autopilot and waits for rescue"], answer: 2 },
+        { q: "What is the first food Brian successfully obtains in the wilderness?", choices: ["Fish","Raspberries","A rabbit","Bird eggs"], answer: 1 },
+        { q: "What near-disaster does Brian face right after finding raspberries?", choices: ["He is stung by bees","He encounters a bear","A tornado destroys his shelter","He falls into the lake"], answer: 1 },
+        { q: "Brian's first attempt to make fire fails because he doesn't understand what key ingredient is needed. What does he realize he is missing?", choices: ["Dry tinder stacked in a tight bundle","Air — something to breathe life into the flame","Two pieces of flint rock to produce sparks","Direct sunlight focused through a lens"], answer: 1 },
+        { q: "What does Brian call the birds whose eggs he harvests near his shelter?", choices: ["Foolbirds","Luckbirds","Meadowlarks","Plovers"], answer: 0 },
+        { q: "What natural disaster strikes Brian's camp and reshapes his situation near the end of the story?", choices: ["A wildfire","A flood","A tornado","A blizzard"], answer: 2 },
+        { q: "How does Brian finally signal the rescue plane that finds him?", choices: ["He builds a large signal fire","He uses a mirror from the survival pack","He swims into the lake waving his shirt","He fires a flare from the survival pack"], answer: 3 },
+        { q: "When Brian dives to the submerged plane to retrieve the survival pack, what dangerous animal attacks him in the water?", choices: ["A pike fish","A snapping turtle","A moose","A wolf"], answer: 0 }
+      ],
+      // ── QUIZ 2 ──
+      [
+        { q: "What is Brian's last name?", choices: ["Robeson","Paulsen","Carter","Walters"], answer: 0 },
+        { q: "How does the pilot of the plane die?", choices: ["He is struck by lightning","He has a massive heart attack","He crashes into a bird","He falls asleep and loses control"], answer: 1 },
+        { q: "What province of Canada does Brian crash-land in?", choices: ["Ontario","British Columbia","Saskatchewan","Quebec"], answer: 2 },
+        { q: "What does Brian use to make sparks when creating fire?", choices: ["Two dry sticks he rubs vigorously together","The blade of his hatchet struck hard against a rock","A cracked lens he removes from his glasses","Pieces of sharp flint he finds along the lakeshore"], answer: 1 },
+        { q: "Brian builds his shelter under what kind of natural feature?", choices: ["A hollow log","A rocky overhang/ledge","A spruce tree","A sand dune"], answer: 1 },
+        { q: "A porcupine enters Brian's shelter and injures him. What does he do immediately after?", choices: ["He grabs a large rock and kills it for food","He hurls his hatchet at it — it hits the wall and leaves his hand badly bruised","He scrambles out through the shelter door to escape the quills","He pins it beneath a flat rock and waits for it to leave"], answer: 1 },
+        { q: "The book describes a turning point where Brian stops wallowing and starts focusing on survival. How is this shift described?", choices: ["It is called the Awakening — he wakes from a vivid dream about his father and is transformed","It is called the Change — Paulsen marks it as a defined turning point with that label","It is not named — he simply recognizes self-pity is useless and shifts his entire focus to survival","It is called the Reset — Brian uses this exact word in his own internal monologue"], answer: 2 },
+        { q: "A moose attack in the lake injures Brian badly. What does he suffer?", choices: ["A broken leg","Cracked ribs and internal bruising","A dislocated shoulder","A deep gash on his head"], answer: 1 },
+        { q: "What animal destroys Brian's camp and tears open his door while he is sleeping?", choices: ["A black bear","A skunk","A moose","A wolverine"], answer: 0 },
+        { q: "How many days total does Brian spend alone in the wilderness before being rescued?", choices: ["32 days","42 days","54 days","61 days"], answer: 2 }
+      ],
+      // ── QUIZ 3 ──
+      [
+        { q: "What job does Brian's father have that requires him to live in Canada?", choices: ["Park ranger","Oil company engineer","Wildlife biologist","Lumber mill supervisor"], answer: 1 },
+        { q: "Brian is flying on what type of small aircraft when the pilot dies?", choices: ["Cessna 406","Piper Cherokee","Twin Otter","Beechcraft Bonanza"], answer: 0 },
+        { q: "When Brian first finds raspberries, a bear is also eating them. What does the bear do?", choices: ["It charges and injures Brian","It growls and then ignores him and moves on","It runs away immediately","It follows Brian back to his shelter"], answer: 1 },
+        { q: "What does Brian learn about \"foolbirds\" that makes them so hard to spot?", choices: ["They only come out at night","They look exactly like the ground / perfectly camouflaged","They live only underground","They scatter and fly away at the slightest movement"], answer: 1 },
+        { q: "What does Brian retrieve from the submerged plane that most changes his survival situation?", choices: ["A scoped rifle packed with a box of ammunition","A survival pack with food rations, basic tools, and an emergency transmitter","A handheld two-way radio for contacting search planes","Dry clothes, waterproof matches, and a heavy wool blanket"], answer: 1 },
+        { q: "Brian accidentally activates the emergency transmitter. What happens as a result?", choices: ["Nothing — the battery has corroded and is dead","A passing bush pilot picks up the signal and lands to investigate","A military search helicopter arrives within hours","He hears a voice say help will arrive in three days"], answer: 1 },
+        { q: "Which of the following is NOT something Brian finds or makes use of during his time in the wilderness?", choices: ["A bow and arrow","A fish spear","A raft made of logs","Smoked fish to preserve food"], answer: 2 },
+        { q: "Brian reflects multiple times on a piece of advice. Who gave it and what did they say?", choices: ["His father: always carry waterproof matches in the wilderness","His English teacher: keep your head — your mind is your most valuable tool","His mother: always trust your gut when you feel afraid","His gym teacher: breathe, stay calm, and think before acting"], answer: 1 },
+        { q: "After the tornado, something bobs to the surface of the lake that changes everything for Brian. What is it?", choices: ["The pilot's body, still strapped to his seat","The plane's tail section, marking where the fuselage sank","A bright orange life jacket from the cockpit","A sealed case of emergency signal flares"], answer: 1 },
+        { q: "What change does Brian notice in himself by the end of the novel that shows how much he has grown?", choices: ["He realizes he has completely stopped thinking about the Secret","He eats mechanically now, focused entirely on counting calories","He is permanently sharper and more patient — changed by the wilderness in a way that will last","He has quietly forgotten nearly everything about his old life before the crash"], answer: 2 }
+      ]
+    ]
+  },
+  {
+    id: "holes",
+    title: "Holes",
+    author: "Louis Sachar",
+    emoji: "⛏️",
+    points: 150,
+    lexile: "660L",
+    pages: 288,
+    quizzes: [
+      // ── QUIZ 1 ──
+      [
+        { q: "Why is Stanley Yelnats sent to Camp Green Lake?", choices: ["He vandalized school property and received demerits","He is falsely convicted of stealing Clyde Livingston's signed sneakers","He was caught shoplifting food from a corner store","He got in a fight and seriously injured another student"], answer: 1 },
+        { q: "What does the Warden make the boys do all day at Camp Green Lake?", choices: ["Build fences around the camp perimeter","Dig holes five feet wide and five feet deep","Clear brush and dead trees from the lakebed","Run obstacle courses for physical training"], answer: 1 },
+        { q: "Stanley's family has a curse. Who is blamed for starting it, and why?", choices: ["Stanley's grandfather, who cheated at cards","Stanley's great-great-grandfather, who broke a promise to a fortune-teller","Elya Yelnats, who stole a pig and never made it right with Madame Zeroni","A Yelnats ancestor who robbed a king's messenger"], answer: 2 },
+        { q: "What nickname do the boys give Stanley at camp?", choices: ["Big Guy","Caveman","Zigzag","X-Ray"], answer: 1 },
+        { q: "What does Zero (Hector Zeroni) reveal he can do that surprises the other boys?", choices: ["He can whistle loud enough to be heard a mile away","He cannot read, and Stanley teaches him","He can run faster than anyone in camp","He memorized the entire layout of the camp tunnels"], answer: 1 },
+        { q: "What object does Stanley find in his hole that X-Ray claims so he can get a day off?", choices: ["A small gold coin stamped with a weathered skull design","A gold lipstick tube with a heart and the engraved initials K and B","A water-stained fragment of what looks like an old treasure map","A small tarnished brass skeleton key on a broken chain"], answer: 1 },
+        { q: "What is the name of the outlaw woman who roamed the land 110 years before the story?", choices: ["Madam Zeroni","Kissin' Kate Barlow","Wild Rose Livingston","Rattlesnake Rosa"], answer: 1 },
+        { q: "What does Zero do that causes him to run away from Camp Green Lake?", choices: ["He attacks the Warden during inspection","He smashes Mr. Pendanski with a shovel after being mocked","He slips away during a camp supply delivery","He pockets a piece of the treasure and flees"], answer: 1 },
+        { q: "What mountain do Stanley and Zero try to reach for survival?", choices: ["Mount Baldy","God's Thumb","Big Rock Mountain","The Thumb of God (same mountain, called both names)"], answer: 1 },
+        { q: "What does Zero's real last name turn out to be, connecting the two storylines?", choices: ["Livingston","Caveman","Zeroni","Yelnats"], answer: 2 }
+      ],
+      // ── QUIZ 2 ──
+      [
+        { q: "What famous athlete's shoes were supposedly stolen — framing Stanley?", choices: ["Michael Jordan","Shaquille O'Neal","Clyde 'Sweet Feet' Livingston","Magic Johnson"], answer: 2 },
+        { q: "The Warden is really looking for something specific when she makes the boys dig. What is it?", choices: ["A buried Confederate gold shipment","Kate Barlow's stolen treasure / loot","The deed to the land proving she owns the lake","A locked strongbox belonging to her family"], answer: 1 },
+        { q: "What is Sam the Onion Man's famous claim about onions?", choices: ["An onion a day keeps the doctor away and cures just about anything","Onions make you invisible to rattlesnakes","Onions are the only vegetable that grows in desert soil","Onions taste better than anything you've ever eaten"], answer: 0 },
+        { q: "Why is Kate Barlow's kiss so famous and feared?", choices: ["She poisoned her lipstick to kill her victims","She only kissed the men she killed","She kissed the men she robbed but left them alive, which was worse","She kissed the law enforcement officers who chased her"], answer: 1 },
+        { q: "What does Zero eat under the boat that keeps him alive in the desert?", choices: ["Canned peaches","Sploosh — a rotted-down peach preserve","Dried onions and a jar of something sweet","Rainwater and dried beef"], answer: 1 },
+        { q: "How does the Yelnats family curse finally get lifted?", choices: ["Stanley digs up the treasure chest and immediately donates his half to charity","Stanley carries Zero up the mountain on his back — completing what Elya Yelnats never did for Madame Zeroni","Stanley tracks down a land deed that proves the Zeroni family owns the camp property","Zero climbs to the stream and recites Madame Zeroni's original words from memory"], answer: 1 },
+        { q: "What does the Warden put on her fingernails, which she uses to scratch Mr. Sir's face?", choices: ["A translucent snake-venom gloss","Rattlesnake venom blended into her nail polish","Cactus spine extract","A toxin scraped from yellow-spotted lizard scales"], answer: 1 },
+        { q: "What kind of lizard do Stanley and Zero find themselves surrounded by in the hole where the treasure is?", choices: ["Gila monsters","Yellow-spotted lizards","Horned toads","Desert iguanas"], answer: 1 },
+        { q: "Who is Stanley's attorney, and how does she prove his innocence?", choices: ["Ms. Morengo — she shows the sneakers were donated before the date of the alleged theft","The original judge — he reviews the case and issues an apology","A legal aid worker — she files an appeal based on wrongful conviction","Ms. Morengo — she discovers the camp has no legal authority to make boys dig"], answer: 0 },
+        { q: "What sign does Stanley see on the old boat in the desert that foreshadows Zero's connection to the story?", choices: ["'Mary Lou' — the name of Sam's donkey","'Hector's Dream'","'Camp Green Lake Original Vessel'","'Zeroni Transport Co.'"], answer: 0 }
+      ],
+      // ── QUIZ 3 ──
+      [
+        { q: "What is the name of the camp counselor the boys most dislike, who taunts Zero about his family?", choices: ["Mr. Sir (called 'the rattlesnake' by boys)","The Warden, who runs the whole camp","Mr. Pendanski (called 'Mom' by the boys)","Mr. Lerner, the night guard supervisor"], answer: 2 },
+        { q: "Stanley's great-great-grandfather made his fortune and then lost it when he was robbed by whom?", choices: ["The Warden's grandfather","Kissin' Kate Barlow","Sam the Onion Man","A group of outlaws in the mountains"], answer: 1 },
+        { q: "What did Elya Yelnats promise Madame Zeroni in exchange for her help with the pig?", choices: ["He promised to return the fattened pig to her once it had won the contest","He would carry Madame Zeroni up the mountain, hold her to the stream, and sing to her","He promised to send her a sum of gold from America once he had made his fortune there","He promised that his firstborn son would bear her family name as a middle name"], answer: 1 },
+        { q: "Why is the lake completely dry in the present-day story?", choices: ["A drought lasting over a hundred years slowly evaporated every drop","The original townspeople deliberately drained it while searching for Kate Barlow's loot","The water supply was rerouted through pipes to serve a rapidly growing nearby city","After Sam's murder, Kate Barlow cursed the land, the town fell apart, and the lake slowly dried up"], answer: 3 },
+        { q: "How does Mr. Sir punish Stanley after the Warden humiliates him in front of Stanley?", choices: ["He docks Stanley's water allowance entirely for the remainder of the week","Each time Stanley comes for water, Mr. Sir fills his canteen — then deliberately spits inside it, every single day","He forces Stanley to report at dawn to dig a second full hole before the regular day begins","He personally escorts Stanley to Tent D and reassigns him to bunk with the camp's most dangerous boys"], answer: 1 },
+        { q: "Which group member discovers that the yellow-spotted lizards will not bite Stanley and Zero in the hole?", choices: ["No one discovers it during the scene — it is just luck","The Warden notices they aren't being bitten and wonders why","Mr. Sir figures out it must be the onions they ate","It is never fully explained"], answer: 2 },
+        { q: "What does the chest Stanley and Zero find contain, and whose name is stamped on it?", choices: ["Gold coins minted by the long-defunct Green Lake Bank","Documents and valuables stamped with the name Stanley Yelnats — stolen long ago from his great-great-grandfather","Kate Barlow's personal diary alongside a locket containing a photo","Legal deeds showing the Warden's family holds title to all the land around the former lake"], answer: 1 },
+        { q: "What happens to Camp Green Lake at the end of the book?", choices: ["It becomes a state nature preserve","It is shut down, the boys go home, and the Warden faces legal trouble","It reopens as a legitimate summer camp","Stanley's family buys the land with their treasure money"], answer: 1 },
+        { q: "How does the novel use the motif of 'holes' beyond literal digging?", choices: ["Each hole the boys dig represents one full year that the Yelnats family curse has been active","The holes are a metaphor — each one represents a gap in a character's past that the novel slowly fills in","The holes represent the emotional emptiness each of the broken, displaced boys carries inside them","The holes literalize the Warden's greed, showing how her obsession has physically hollowed out the earth"], answer: 1 },
+        { q: "What did Kate Barlow do before she became an outlaw, and what turned her?", choices: ["She was a deputy sheriff systematically forced out of office by a corrupt local judge","She was a beloved and award-winning schoolteacher — her life shattered when the town murdered Sam, the man she loved","She ran Green Lake's most popular saloon until a jealous mob burned it to the ground","She was a successful farmer whose entire livelihood was destroyed by the drought, and she blamed the government for her ruin"], answer: 1 }
+      ]
+    ]
+  },
+  {
+    id: "hp",
+    title: "Harry Potter and the Sorcerer's Stone",
+    author: "J.K. Rowling",
+    emoji: "⚡",
+    points: 500,
+    lexile: "880L",
+    pages: 309,
+    quizzes: [
+      // ── QUIZ 1 ──
+      [
+        { q: "During Harry's first Quidditch match, his broom is jinxed. What does Hermione do — and who is really responsible?", choices: ["She quietly casts a counter-jinx aimed at Snape, not realizing the jinx is actually Quirrell's work all along","She sets Snape's robes on fire to break his concentration — not knowing that Quirrell is actually the one jinxing Harry from across the stadium","She physically shoves Snape sideways in the stands; the jinx is later revealed to be Voldemort speaking directly through Quirrell's body","She fights her way to Dumbledore and alerts him; he removes Snape from the stands, and it turns out Snape was responsible after all"], answer: 1 },
+        { q: "What exact words does Ron say when he finally gets Wingardium Leviosa right — or rather, what does Hermione correct about his pronunciation?", choices: ["He says 'Wing-AR-dium' and she tells him it's 'WIN-gardium'","He swishes without a flick; she tells him 'swish and flick'","He says 'Levi-OH-sa' but she corrects it to 'Levio-SAR'","He says 'Leviosa' correctly but waves his wand wrong — she corrects his grip"], answer: 1 },
+        { q: "What does Dumbledore claim to see when he looks in the Mirror of Erised?", choices: ["Himself as the greatest wizard who ever lived","Himself holding a pair of thick woolen socks","A vision of Harry defeating Voldemort","His late sister Ariana, alive and well"], answer: 1 },
+        { q: "At the end-of-year feast, whose last-minute points push Gryffindor past Slytherin for the House Cup?", choices: ["Harry's — Dumbledore awards him 60 points for finding the Stone","Neville's — his 10 points for standing up to his friends seal the victory","Ron's — his chess sacrifice earns the final points needed","Hermione's — her logic in the potions chamber earns the tipping points"], answer: 1 },
+        { q: "Harry receives his Nimbus 2000 by owl during breakfast. What does the note say, and who sent it?", choices: ["No note — Dumbledore sent it anonymously","Professor McGonagall's note: your new broom, do not open at the table","A form letter from the Hogwarts Quidditch equipment office","A note signed by James Potter's old Gryffindor teammates"], answer: 1 },
+        { q: "When Harry first meets Draco Malfoy — before they know each other's names — where does the meeting take place?", choices: ["On the Hogwarts Express","At Madam Malkin's robe shop in Diagon Alley","On the Hogwarts grounds during the welcome feast","In the Hogwarts corridor on the first day of classes"], answer: 1 },
+        { q: "What does the Sorting Hat originally say about Slytherin house that shows it isn't purely evil?", choices: ["Nothing positive — it warns Harry away from Slytherin explicitly","It tells Harry Slytherin will help him on the way to greatness","It says Slytherin produces the bravest wizards","It refuses to sort Harry into Slytherin on the grounds he is too good"], answer: 1 },
+        { q: "Nicolas Flamel is 665 years old. Where does Harry first come across his name?", choices: ["A library book Hermione borrows on alchemy","The back of a Dumbledore Famous Wizard card from a chocolate frog","A note tucked inside his father's invisibility cloak","An engraving on a plaque in the school trophy room"], answer: 1 },
+        { q: "When Quirrell unwraps his turban in the final chamber, what is revealed?", choices: ["A Dark Mark branded into his scalp","Voldemort's chalk-white, red-eyed face fused to the back of his skull","A map showing where the Stone is hidden","Nothing visible — Voldemort possesses him without a physical form"], answer: 1 },
+        { q: "What does Harry find in his pocket when he looks into the Mirror of Erised and wishes only to find the Stone — not use it?", choices: ["A note from Dumbledore saying the Stone is safe","The actual Sorcerer's Stone, warm and heavy","A red stone that turns out to be fake","Nothing yet — he has to speak the password aloud first"], answer: 1 }
+      ],
+      // ── QUIZ 2 ──
+      [
+        { q: "Ollivander calls Harry's wand 'curious.' What is curious about it?", choices: ["Holly is so rare Ollivander had never used it before","The same phoenix gave only one other feather — which sits in Voldemort's wand","It was crafted for a left-handed wizard but chose Harry anyway","At over four centuries old, it is the oldest wand Ollivander has ever sold"], answer: 1 },
+        { q: "What does the notice about the third-floor corridor say, and what does Harry notice when they stumble onto it?", choices: ["'No students are permitted beyond this corridor after evening hours' — and the padlock looks like it has been forced","'Forbidden to all who do not wish to die a most painful death' — yet the door is already standing unlocked","'Restricted area — authorised staff access only' — they find the door left slightly ajar","'Danger — under construction, risk of serious injury' — it turns out to be an elaborate decoy set by Dumbledore"], answer: 1 },
+        { q: "Which subject does Hermione raise her hand in but give the wrong answer — the only time readers see her get something wrong in class?", choices: ["Potions — she miscalculates a drying time","History of Magic — she confuses two goblin rebellions","Astronomy — she names a moon of Jupiter incorrectly","Charms — she uses the wrong wand movement"], answer: 0 },
+        { q: "On Halloween, why is Hermione alone in the bathroom when the troll attacks?", choices: ["She was practicing Wingardium Leviosa and lost track of time","She had heard Ron say she had no friends and went to cry","She had slipped away to investigate the third-floor corridor","She stayed behind to finish an extra credit essay"], answer: 1 },
+        { q: "When Harry meets Professor Quirrell at the Leaky Cauldron, what stands out most?", choices: ["He appears unusually jittery and nervous for someone who claims to be a Defense professor","He smells overpoweringly of garlic and explains it by claiming he recently faced a vampire in Romania","He gives off an unsettling sense of hidden power beneath his stuttering, frail exterior","His enormous purple turban stands out immediately and looks conspicuously out of place"], answer: 1 },
+        { q: "What does Ron do to win the chess game — and what price does he pay?", choices: ["He plays the king and surrenders, ending the game cleanly","He stands in as a knight, gets knocked from the horse, and is left unconscious on the board","He sacrifices his queen piece, then collapses from the magical strain","He takes the bishop's place and allows himself to be captured so Harry has a clear path"], answer: 1 },
+        { q: "What is Snape's challenge protecting the Stone, and how does Hermione crack it?", choices: ["An enchanted shifting maze of corridors — Hermione uses a direction-finding charm to plot the exit","Seven potion bottles with a logic riddle — one moves you forward, one sends you back, the others poison or stun","A door sealed with a spoken password — Hermione deduces it by cross-referencing patterns from Snape's classroom lessons","A potion that must be brewed in under two minutes with no errors — Hermione has already memorized the full recipe by heart"], answer: 1 },
+        { q: "What gift does Neville's grandmother send him that becomes relevant during flying class?", choices: ["A battered second-hand Comet 260 broomstick with a bent twig","A Remembrall — a glass ball that fills with red smoke when you've forgotten something","A full set of padded Quidditch helmet, shin guards, and knee pads","A pocket sneakoscope on a silver chain that spins and whistles near untrustworthy people"], answer: 1 },
+        { q: "In Snape's first Potions lesson, how does he treat Harry, and what does he quiz him on?", choices: ["He seats Harry apart from the others and quizzes him on the Stone","He lets Harry sit in the wrong house section and asks about Polyjuice Potion","He singles Harry out and asks about bezoars, monkshood, and wolfsbane — Harry can answer none","He deducts points because Harry forgot his textbook, then asks about a shrinking solution"], answer: 2 },
+        { q: "What does Peeves the poltergeist do that almost gets Harry, Ron, and Hermione caught after the midnight duel fiasco?", choices: ["He trips an alarm that seals the corridor behind them","He loudly tells Filch exactly where the students are hiding","He locks the door of the trophy room, trapping them inside","He drops a suit of armor on the staircase, making a crash that draws Filch"], answer: 1 }
+      ],
+      // ── QUIZ 3 ──
+      [
+        { q: "What does Harry see the first time he looks into the Mirror of Erised?", choices: ["Himself as the greatest wizard alive, having defeated Voldemort","Himself with a large family surrounding him, his parents smiling just behind","Himself lifting the Quidditch Cup on the pitch alone","Himself in the Sorting Hat being called to Gryffindor"], answer: 1 },
+        { q: "What is the name of Hagrid's dragon, and who takes it away — and how?", choices: ["Norbert; Charlie Weasley's friends collect it from the tallest tower at midnight","Norbert; the Ministry of Magic confiscates it after Hagrid accidentally sets Malfoy on fire","Nagini; it escapes on its own and is captured in the Forbidden Forest","Norbert; Professor Dumbledore arranges for it to go to a dragon reserve in Romania via portkey"], answer: 0 },
+        { q: "The Sorting Hat deliberates over Harry longer than most students. What happens during that time?", choices: ["Harry begs aloud, making it a five-minute Hatstall","Harry mentally repeats 'not Slytherin' until the Hat finally shouts Gryffindor","The Hat chooses instantly — his parents' house makes it automatic","The Hat asks Harry aloud which house he prefers, and Harry answers"], answer: 1 },
+        { q: "How does Harry first enter Diagon Alley?", choices: ["Through a portkey Dumbledore has cleverly concealed inside his Hogwarts acceptance letter","Hagrid walks him through the Leaky Cauldron and taps a pattern on the brick wall out back, which opens up","By standing before a featureless wall and speaking 'Alohomora' until it swings aside","Via a battered red telephone box on a London street that descends underground into the Ministry of Magic"], answer: 1 },
+        { q: "What is the name of Harry's owl?", choices: ["Errol","Pigwidgeon","Hedwig","Fawkes"], answer: 2 },
+        { q: "Fluffy can be put to sleep by music. What instrument is already playing when the trio arrives at the trapdoor on their mission to protect the Stone?", choices: ["A harp, enchanted by Dumbledore","A flute Quirrell left there playing on its own","A magical music box Hagrid used to soothe him as a puppy","A piano charmed by Professor Flitwick"], answer: 1 },
+        { q: "What does Professor McGonagall transfigure her desk into to demonstrate Transfiguration on the very first day of class?", choices: ["A pig","A porcupine","A pig, then back again","A beautiful bird, then back to the desk"], answer: 0 },
+        { q: "Harry ends his first Quidditch match by catching the Snitch in his mouth. Why was he in such a steep dive?", choices: ["He had already spotted the Snitch hovering just inches above the turf and aimed for it deliberately","His jinxed broom had thrown him into a violent uncontrolled nosedive — he snatched the Snitch out of instinct to stop his fall","He was wrenching his broom sideways to dodge a Bludger that had been aimed squarely at his head","He pulled a deliberate Wronski Feint to shake the Slytherin Seeker and only spotted the real Snitch by pure accident"], answer: 1 },
+        { q: "How does Hermione save the trio from Devil's Snare, and what does she have to remind Ron?", choices: ["She casts Lumos Solem for blinding light; tells Ron it will not actually kill them","She uses Incendio; tells Ron the plant fears heat above all else","She conjures a bluebell flame; tells Ron to stop struggling — fighting it makes it tighten","She uses Finite Incantatem; tells Ron it responds to counter-spells, not panic"], answer: 2 },
+        { q: "What is the name of the key Harry catches on his broomstick in the second chamber protecting the Stone, and why is it the right one?", choices: ["It is silver and has a bent wing from being previously caught","It has Dumbledore's initials engraved on it","It is the largest key in the room","It is the only key made of gold rather than silver"], answer: 0 }
+      ]
+    ]
+  },
+  {
+    id: "wof",
+    title: "Wings of Fire: The Dragonet Prophecy",
+    author: "Tui T. Sutherland",
+    emoji: "🐉",
+    points: 350,
+    lexile: "740L",
+    pages: 336,
+    quizzes: [
+      // ── QUIZ 1 ──
+      [
+        { q: "The five dragonets of the prophecy are each from a different tribe. Which dragonet is a MudWing?", choices: ["Tsunami","Glory","Clay","Starflight"], answer: 2 },
+        { q: "Who are the guardians raising the dragonets in the underground cave?", choices: ["Morhen, Dune, and Hvitur","Kestrel, Dune, and Webs","Asha, Kestrel, and Nautilus","Blaze, Burn, and Blister"], answer: 1 },
+        { q: "What is the dragonets' underground home called?", choices: ["The Deep Cave","The Hidden World","The Secret Cavern","The Sky Kingdom basement"], answer: 1 },
+        { q: "Who is the SkyWing dragonet who was supposed to be part of the prophecy but died before hatching?", choices: ["Peril","Osprey","Hvitur (the guardian who was killed carrying the egg)","The egg — it cracked before it could be saved"], answer: 3 },
+        { q: "Queen Scarlet captures the dragonets. What does she force them to do?", choices: ["Work in her mines","Fight in her arena for entertainment","Teach her own dragonets about the prophecy","Spy on the three SandWing sister-queens"], answer: 1 },
+        { q: "What makes Peril unlike any other dragon in Queen Scarlet's arena?", choices: ["She was hatched with a rare genetic defect giving her a vestigial second pair of wings","She was born with too much fire — her scales run so hot that touching her burns other dragons instantly","She emerged from her egg with absolutely no fire whatsoever, making her useless in battle by SkyWing standards","She cannot produce true fire at all, instead spitting a highly corrosive acid that dissolves scales on contact"], answer: 1 },
+        { q: "Which SandWing princess does Starflight believe the Talons of Peace want to put on the throne?", choices: ["Burn","Blaze","Blister","Tsunami believes it should be Blister — Starflight has doubts"], answer: 1 },
+        { q: "What does Glory do in the arena that no one — including her own allies — expected?", choices: ["She breathes fire, despite RainWings supposedly being unable to","She spits venom with deadly accuracy, a weapon no one thought a RainWing possessed","She freezes the fight by invoking the names of all five tribes","She reads the opponent's mind and announces his moves before he makes them"], answer: 1 },
+        { q: "How do the dragonets break free from Queen Scarlet's arena?", choices: ["Peril quietly unlocks their chains from the inside","Glory's venom hits Scarlet, and the dragonets flee in the resulting chaos","Clay snaps his chains and fights off the guards alone while the others run","Tsunami summons a surge from an underground river to flood the arena"], answer: 1 },
+        { q: "At the end of the book, who is revealed to be Clay's MudWing sister who was watching over him?", choices: ["Reed","Asha","Cattail","Crane"], answer: 0 }
+      ],
+      // ── QUIZ 2 ──
+      [
+        { q: "What is the SandWing queen's name — the one who died and whose death started the war?", choices: ["Blaze","Oasis","Sandfire","Horizon"], answer: 1 },
+        { q: "What two abilities set RainWings like Glory apart from other tribes?", choices: ["Breathing both fire and freezing mist","Shifting their scale color and spitting paralyzing venom","Full invisibility and silent flight","Speed — they are the fastest fliers on Pyrrhia"], answer: 1 },
+        { q: "Tsunami is a SeaWing. What abilities does her tribe have?", choices: ["IceWings breathe frost — Tsunami has this because her egg was smuggled","SeaWings can breathe underwater and use glowing scales to communicate in the dark","SkyWings have the greatest altitude and endurance in flight","MudWings are nearly fireproof and can breathe fire at a young age"], answer: 1 },
+        { q: "What is the most strictly enforced rule the guardians impose on the dragonets?", choices: ["They may never speak to dragons outside the cave under any circumstances","They cannot go above ground or contact the outside world until deemed ready","They must deny being the dragonets of the prophecy if anyone asks","They are not permitted to learn to read — knowledge is controlled"], answer: 1 },
+        { q: "Why does Kestrel resent Glory from the very start?", choices: ["Glory accidentally crushed one of Kestrel's own precious eggs while playing as a hatchling","Glory replaced the SkyWing egg Kestrel was meant to guard — Kestrel views her as an illegitimate substitute","The way Glory's scales shift color reminded Kestrel viscerally of a RainWing she once killed in battle","Kestrel had studied the prophecy and was convinced it called specifically for a male RainWing dragonet"], answer: 1 },
+        { q: "What happens to Dune, one of the guardians, early in the escape attempt?", choices: ["He betrays the dragonets to Queen Scarlet","He is killed by Kestrel for allowing the dragonets to see above ground","He is mortally wounded in the attack on the cave and dies","He abandons the dragonets and flees on his own"], answer: 2 },
+        { q: "Queen Scarlet puts a special dragon in the arena that the dragonets were not supposed to be able to beat. Who or what is it?", choices: ["A full-grown IceWing general","A nightwing seer named Morrowseer","Burn herself","A half-dead SandWing soldier with nothing to lose"], answer: 0 },
+        { q: "Starflight is a NightWing. What ability are NightWings rumored to have?", choices: ["They can read minds and see the future","They can make themselves invisible at night","They can mimic any dragon's voice","They have scales that absorb magic"], answer: 0 },
+        { q: "At the end of the book, a NightWing named Morrowseer appears. What does he want?", choices: ["To take Starflight away and instruct the dragonets on which queen to support","To kill the dragonets on behalf of one of the SandWing sisters","To deliver a revised prophecy from the NightWing elders","To claim that he is the real sixth dragonet of destiny"], answer: 0 },
+        { q: "What does Clay discover about himself during a fight that even he didn't know?", choices: ["He can generate fire hotter than any MudWing on record","Years in the underground mud have made his scales extraordinarily fireproof","He can understand and speak to non-dragon animals","He has a second set of retractable claws concealed beneath his outer scales"], answer: 1 }
+      ],
+      // ── QUIZ 3 ──
+      [
+        { q: "The prophecy says the dragonets will 'choose' the next SandWing queen. There are three sisters competing. Who are they?", choices: ["Sand, Sun, and Stone","Oasis, Blaze, and Blister","Burn, Blaze, and Blister","Scorch, Blister, and Flame"], answer: 2 },
+        { q: "What made the five prophecy eggs special compared to ordinary dragon eggs?", choices: ["Each was laid beneath a full moon on the same night","Each hatched on the brightest night — when two full moons align, per NightWing tradition","They were the sole surviving eggs of five different tribes born in the same season","They were personally selected and stolen by the Talons of Peace from each tribe's queen"], answer: 1 },
+        { q: "How would you describe Clay's role among the five dragonets?", choices: ["The strategist — he thinks three moves ahead while the others react","The heart of the group — fiercely loyal, always putting the others' safety first","The cautious one — his fear makes him hesitate but keeps everyone alive","The fighter — most courageous in battle but blind to others' feelings"], answer: 1 },
+        { q: "What is the name of the SkyWing queen who captures the dragonets?", choices: ["Queen Scarlet","Queen Vermilion","Queen Crimson","Queen Ruby"], answer: 0 },
+        { q: "Why is Webs in trouble with the Talons of Peace?", choices: ["He showed the dragonets a forbidden scroll about their own prophecy","He swapped in a RainWing egg for the missing SkyWing egg without authorization","He began combat training years ahead of the approved schedule","He leaked the dragonets' location to Queen Scarlet"], answer: 1 },
+        { q: "How does Tsunami respond when she discovers the truth about her royal SeaWing origins?", choices: ["With pure joy — she immediately wants to swim to the Kingdom of the Sea","With conflict — she longs for her real family but dreads what finding them might mean","With flat denial — she insists the information must be wrong","With calm practicality — she gathers the others and asks them to vote on what to do"], answer: 1 },
+        { q: "Which dragonet does Queen Scarlet seem to enjoy taunting the most, and why?", choices: ["Starflight, because NightWings consider themselves superior","Glory, because a RainWing in the arena offends Scarlet's sense of what a 'proper' dragon should be","Clay, because she wants to make him fight against his nature","Tsunami, because she is the most defiant"], answer: 3 },
+        { q: "What does Starflight do during a crucial moment that frustrates the others and reveals his character flaw?", choices: ["He freezes and fails to act when he could have helped them escape sooner","He gives away their escape plan to avoid conflict","He refuses to fight under any circumstances","He secretly communicates with Morrowseer without telling the others"], answer: 0 },
+        { q: "Who is Hvitur, and what is his fate in the prologue?", choices: ["A NightWing elder who spent decades memorizing every version of the prophecy and concealing the scrolls","An IceWing Talon of Peace killed by Burn while carrying the SkyWing prophecy egg — which shatters when he falls","The original founding dragon of the Talons of Peace, credited with composing the Dragonet Prophecy himself","A MudWing guardian tasked with carrying Clay's egg who disappeared without a trace into the mud swamps"], answer: 1 },
+        { q: "By the end of the book, have the dragonets fulfilled the prophecy — and how do they feel about it?", choices: ["Yes — they formally name Blister as the SandWing queen and the war between the tribes ends immediately","No — they escape but are now openly resistant to fulfilling the prophecy on anyone else's terms","Yes — but only after Morrowseer arrives and essentially forces their hand by threatening Starflight","No — they hold a vote, formally renounce their destiny, and scatter to begin ordinary free lives"], answer: 1 }
+      ]
+    ]
+  },
+  {
+    id: "spyschool",
+    title: "Spy School",
+    author: "Stuart Gibbs",
+    emoji: "🕵️",
+    points: 275,
+    lexile: "740L",
+    pages: 320,
+    quizzes: [
+      // ── QUIZ 1 ──
+      [
+        { q: "What is Ben Ripley's dream job at the start of the novel?", choices: ["FBI field agent","CIA analyst","CIA operative / spy","Military intelligence officer"], answer: 2 },
+        { q: "How does Ben think he is recruited to the Academy of Espionage?", choices: ["An official-looking letter arrives at his school citing his outstanding performance on standardized math exams","A CIA recruiter calls his house to discuss his unusually strong problem-solving abilities with his parents","He enters and wins a national science competition whose secret grand prize turns out to be enrollment","A stranger visits his house and offers enrollment — Ben assumes it's a prestigious science magnet school"], answer: 3 },
+        { q: "What is the real reason the CIA recruits Ben to the Academy of Espionage?", choices: ["They believe he is a spy prodigy based on his test scores","They want to use him as bait to expose a mole within the CIA","He accidentally discovered classified information and they needed to monitor him","He was incorrectly identified as someone else"], answer: 1 },
+        { q: "What is the name of Ben's first friend at the spy school?", choices: ["Murray Hill","Alexander Hale","Erica Hale","Chip Schacter"], answer: 0 },
+        { q: "Who is Erica Hale at the Academy of Espionage?", choices: ["A first-year student with a warm reputation for helping nervous new recruits settle in","Alexander Hale's daughter — widely regarded as the academy's best student, and a very deliberate loner","A senior field instructor operating undercover as a student in order to keep watch over the incoming class","A planted double agent whose sole assignment from the start is to shadow and report on Ben's every move"], answer: 1 },
+        { q: "What is the name of the terrorist organization that wants to destroy the CIA's headquarters?", choices: ["HYDRA","SPYDER","VIPER","SHADOW"], answer: 1 },
+        { q: "Where is the bomb that SPYDER plans to use against the CIA?", choices: ["Planted under the school cafeteria floor","Tunneled into place beneath the academy's main building","Hidden inside a locker at a nearby shopping mall","Loaded onto a delivery truck bound for Langley"], answer: 1 },
+        { q: "How does Ben figure out that Murray Hill is actually the mole / villain?", choices: ["Erica pulls Ben aside and tells him outright exactly who the mole is","He breaks into Murray's room while he's at dinner and finds a concealed two-way radio hidden under the mattress","He traces who had access to key classified details at the right times — only Murray fits every gap","Murray slips up in a heated confrontation by mentioning a classified detail he should never have known about"], answer: 2 },
+        { q: "How does Ben's impression of Alexander Hale change over the course of the story?", choices: ["Ben's admiration deepens — Hale is even more impressive in person","Hale turns out to be largely incompetent and cowardly — Ben's hero worship evaporates","Hale reveals himself as the true villain behind SPYDER","Hale is secretly Ben's handler and is working against SPYDER the whole time"], answer: 1 },
+        { q: "How does Ben help prevent the bomb from destroying the CIA?", choices: ["He defuses the bomb step by step by carefully applying what he was taught in his first week of class","He uses math to calculate how to redirect the blast, then works with Erica to execute the plan before it's too late","He discovers a decoy bomb in a side tunnel and expertly swaps its live timer onto the real device to buy time","He physically drags the villain away from the detonation trigger and manages to pin him to the ground until backup arrives"], answer: 1 }
+      ],
+      // ── QUIZ 2 ──
+      [
+        { q: "What does SPYDER stand for in the novel?", choices: ["Special Projects Yielding Dangerous Extralegal Results","Society for the Prevention of Youth Doing Espionage Research","The book never gives the full acronym — it is left as a mystery","Secret Projects Yoke Dangerous Enemy Realignment"], answer: 2 },
+        { q: "What is the Academy of Espionage officially called as its cover identity?", choices: ["St. Smithen's Science Academy for Boys and Girls","The National Security Institute for Advanced Studies","Jefferson Technical High School","The Chesapeake Science and Engineering Magnet Program"], answer: 0 },
+        { q: "What is Ben's most notable skill that makes him valuable despite his lack of training?", choices: ["Exceptional physical fitness","Photographic memory","Advanced mathematical reasoning and pattern recognition","Natural lie-detection ability"], answer: 3 },
+        { q: "Ben's room is broken into repeatedly. What are the intruders after?", choices: ["His personal journal and family contacts","Evidence tying him directly to SPYDER","A map of the school's tunnel network he supposedly drew","The real reason he was recruited — his true purpose at the school"], answer: 3 },
+        { q: "What is the SACSA test Ben must pass at the Academy of Espionage?", choices: ["Spy Academy Combat and Survival Assessment — a physical endurance test","Standard Academic Competency and Skills Assessment — the school's basic entrance exam","Secret Agent Conditioning and Situational Awareness test","Strategic Application of Counterintelligence, Surveillance, and Alertness exam"], answer: 1 },
+        { q: "Which older student bully terrorizes Ben physically during his early days at the school?", choices: ["Chip Schacter","Jawa","Warren Reeves","Zoe Zibart"], answer: 0 },
+        { q: "What does Erica Hale tell Ben about trust at the school that foreshadows the betrayal by Murray?", choices: ["She says to always trust fellow first-years since they haven't been corrupted yet","She tells him not to trust anyone, even friends — especially friends","She says Alexander Hale is the one person he can always rely on","She warns him specifically about Murray Hill from the start"], answer: 1 },
+        { q: "What grade is Ben Ripley starting when he arrives at the Academy of Espionage?", choices: ["6th grade — he is 11 years old","7th grade — the academy's first year equivalent","8th grade — he skipped a year due to test scores","9th grade — he is one of the youngest high schoolers enrolled"], answer: 1 },
+        { q: "What does Ben learn about the school's underground tunnels that proves vital?", choices: ["SPYDER operatives have been secretly living inside them","They run directly beneath CIA headquarters — the route the bomb will travel","They serve as a hidden armory for stolen weapons","Built during the Cold War, they are too unstable to safely use"], answer: 1 },
+        { q: "What is ironic about the CIA adults' response at the end of the book?", choices: ["They arrive after everything is over and claim credit anyway","They praise Chip as the hero while Ben and Erica — who actually solved it — get ignored","They classify the incident so thoroughly that even Ben's parents are never told","They draft expulsion papers for Ben despite the fact that he just saved them all"], answer: 1 }
+      ],
+      // ── QUIZ 3 ──
+      [
+        { q: "What happens to Ben on his very first night at the academy?", choices: ["Chip corners him in a hazing ritual that turns violent","A real assassin breaks into his room and tries to kill him — Ben barely gets away","He trips a training sensor that puts the entire school on lockdown","He follows strange sounds into the tunnels and falls into a hidden pit"], answer: 1 },
+        { q: "Why does Ben keep his suspicions about Murray to himself for too long?", choices: ["He is afraid no one will believe a new student over an established one","Murray is his only friend and he doesn't want it to be true","He lacks the evidence and fears being wrong","He was directly told by a teacher to trust Murray"], answer: 1 },
+        { q: "What convinces Erica to work with Ben despite her initial reluctance?", choices: ["He holds his own against her in a supervised hand-to-hand sparring session that surprises everyone watching","He shows genuine analytical thinking under pressure that she can't ignore — she decides he might actually be useful","Alexander Hale pulls Erica aside and directly orders her to watch over Ben and keep him from getting killed","She watches Chip bully and humiliate Ben repeatedly and finally steps in out of pity rather than any strategic calculation"], answer: 1 },
+        { q: "What assignment is Ben given as a 'test' at the start of school that is actually part of the real operation against him?", choices: ["He is told to shadow a suspected Russian spy near campus","He is assigned to build a model of the CIA headquarters from memory","He is asked to investigate whether a certain teacher is a double agent","He is given a routine code-breaking exercise that turns out to use real classified data"], answer: 0 },
+        { q: "How does Ben communicate secretly with Erica when they can't meet openly?", choices: ["Through dead drops in the library","Via coded messages left in the cafeteria chalkboard menu","Through notes hidden in a hollow tree on the school grounds","Through encrypted texts on a secure burner phone Erica provides"], answer: 2 },
+        { q: "Why was Ben specifically chosen as the bait in SPYDER's plan?", choices: ["His photographic memory could potentially expose SPYDER's agents","SPYDER considered his pattern-recognition a direct threat to their operation","He was admitted without proper vetting — making him the easiest new student to use","He had unknowingly intercepted a SPYDER transmission from his bedroom"], answer: 2 },
+        { q: "What does Ben learn about the history of the Academy that surprises him?", choices: ["It was originally a real science school before being converted","It has been infiltrated by SPYDER agents at least twice before","Many of its most famous graduates never actually worked for the CIA","Several staff members have never actually been in the field"], answer: 3 },
+        { q: "What physical challenge does the school throw at new students that Ben struggles with?", choices: ["A swimming test in an ice-cold pool","An obstacle course he must complete alone at night","A hand-to-hand combat assessment against trained upperclassmen","A long-distance run while being 'hunted' by instructors"], answer: 1 },
+        { q: "When Ben confronts Murray about being the mole, how does Murray react?", choices: ["With complete denial — he insists Ben has the wrong person entirely","With remorse — he claims SPYDER coerced him and he had no choice","With casual amusement — he seems almost relieved to drop the act","With fury — he immediately calls for Ben to be eliminated"], answer: 2 },
+        { q: "What becomes of Murray Hill at the end of the story?", choices: ["He is arrested and placed in a juvenile detention facility","He escapes — clearly setting him up as a recurring villain in future books","The CIA flips him into a double agent working for their side","He simply vanishes and the book leaves his fate unresolved"], answer: 1 }
+      ]
+    ]
+  }
+];
+
+// ════════════════════════════════════════════
+// !! TEACHER CONFIGURATION — EDIT THIS SECTION
+// ════════════════════════════════════════════
+
+// Your Google Apps Script Web App URL:
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby4jcp-5_min8P8pkoim2e1ByBD9X5S4DoNrQmCr0sq-OkUve1NpFuXoH_FhkhhJ9JngA/exec';
+
+// Student passcode (what students type to enter — case sensitive):
+const CLASS_PASSCODE = 'Jklkm3827!@#';
+
+// Teacher passcode (type this to access teacher dashboard — case sensitive):
+const TEACHER_PASSCODE = 'Jklkm3827@#$';
+
+// Class roster — in the exact order you want them in the dropdown and Google Sheet.
+const CLASS_ROSTER = [
+  {
+    period: "Period 1",
+    students: [
+      "Austin Alvarado",
+      "Liam Alvarez",
+      "Archer Anderson",
+      "Kayla Bernas",
+      "Rylee Bruton",
+      "Bri Caddell",
+      "Brianna Candiotty",
+      "Kiera Chen",
+      "Clayton Choi",
+      "Kyle Chun",
+      "Hayeon Chung",
+      "Rebel Cornell",
+      "Teddy Ghose",
+      "Kiana Goldstein",
+      "Sadie Harris",
+      "Annette He",
+      "Bea Holman",
+      "Katherine Kim",
+      "Lauren Kim",
+      "Olivia Kim",
+      "Jeremy McQuown",
+      "Harrison Monroe",
+      "Martin Moylan",
+      "Phoebe Munro",
+      "Cailyn Neag",
+      "Rhea Newkirk",
+      "Landon Pardasani",
+      "Sophia Plaza",
+      "Sam Rodriguez",
+      "Athan Segura",
+      "Kaleo Seshiki",
+      "Ryland Simundza",
+      "Ella Stefanski",
+      "Naomi Tompkins",
+      "Ariel Wang",
+    ]
+  },
+  {
+    period: "Period 2",
+    students: [
+      "Camille Anderson",
+      "Brannon Bagwell",
+      "Max Baker",
+      "Peyton Bauer",
+      "Lara Beltran",
+      "Donovan Benavidez",
+      "Symphony Bennett-Mask",
+      "Molly Bragman",
+      "Valentina Chen",
+      "Caleb Choi",
+      "Kenna Coffman",
+      "Jaymin Dalal",
+      "Alex Fernandez",
+      "Ismael Franco Barreras",
+      "Sophia Gayed",
+      "Ava Gluck",
+      "Layla Gregory",
+      "Audrey Gutierrez",
+      "Keegan Haney",
+      "Rowyn Hentges",
+      "Blake La Bounty",
+      "Oliver Levine",
+      "Arielle Lewis",
+      "Emi Munoz",
+      "Fabian Navarro",
+      "Joey Nghe",
+      "Avalon Ostrander",
+      "Katana Quan",
+      "Avery Racklin",
+      "Olivia Tricano",
+      "Saiesh Vaidyanathan",
+      "Brock Van Alstine",
+      "Arielle Walker",
+      "Cole Walker",
+      "Wren Zgonc",
+    ]
+  },
+  {
+    period: "Period 3",
+    students: [
+      "Ava Aguirre",
+      "Mateo Albino Zayas",
+      "Levi Cabaccang",
+      "Blake DeBie",
+      "Sebastian Diaz Serrano",
+      "Ryder Estevez",
+      "Landen Franks",
+      "Grace Garcia",
+      "Alicia Gray",
+      "Paige Green",
+      "Raven Harding",
+      "Ben Hogate",
+      "Joshua Idio",
+      "Nico Leonardo",
+      "Victoria Mandes",
+      "Gunnar Newman",
+      "Valentina Olson",
+      "Avery Ortiz",
+      "Jenny Pan",
+      "Lorenzo Pascual",
+      "Patrick Petersen",
+      "Anthony Piluso",
+      "Ryder Rayl",
+      "Jesus Renteria",
+      "Raquelle Riegelhuth",
+      "Norah Sagen",
+      "Kingston Sawyer",
+      "Eleni Syrengelas",
+      "Thomas Truitt",
+      "Noah Vaught",
+    ]
+  },
+  {
+    period: "Period 4",
+    students: [
+      "Hannah Bosscher",
+      "Penelope Carrillo",
+      "Kaylee Delpit",
+      "Leo Dominguez",
+      "Willow Fredrick",
+      "Jake Guzman",
+      "Ray Hamashita",
+      "John Hanohano Wagner",
+      "Julianna Juarez",
+      "Paige Lamphear",
+      "Carson Larkin",
+      "Gavyn Livingston",
+      "Adriana Luna",
+      "Finn McQuiston",
+      "Blake Miller",
+      "Ethan Monge",
+      "Elio Muralles",
+      "Katy Pollock",
+      "Addi Rados",
+      "Levi Rankin",
+      "Alayna Rocha",
+      "Beheshta Sadat",
+      "Sydney Schutzberger",
+      "Maxwell Smith",
+      "Gavin Tetreault",
+      "Jeremiah Villa",
+      "Moss Wawrzynski",
+      "Kallie Weiss",
+      "Elijah Yturralde",
+    ]
+  },
+  {
+    period: "Period 6",
+    students: [
+      "Eleane Abadillo",
+      "Liam Burdick",
+      "Alex Caldera",
+      "Lana Calub",
+      "Dewey Carpenter Castillo",
+      "Brodey Chesser",
+      "Camden Cockrill",
+      "Reese Daschbach",
+      "Graycen Dyer",
+      "JoJo Espinoza",
+      "Damian Flores Zavala",
+      "Hunter Golea",
+      "Molly Gregory",
+      "Nick Horton",
+      "Deacon Jordan",
+      "Juria Kubota",
+      "Jason Mann",
+      "Ryan McMillan",
+      "Rio Meenan",
+      "Lili Newman",
+      "Mason Puentes",
+      "Ryu Ramirez",
+      "Paul Reyes",
+      "Ryan Reynolds",
+      "Slater Rowland",
+      "Reid Seneris",
+      "James Slentz",
+      "Ashlyn Smith",
+      "Ali Subhi",
+      "Jaxon Vanden Berg",
+      "Iris Vazquez",
+      "Daya Wilkinson",
+      "Katt Zepeda",
+    ]
+  },
+  {
+    period: "Teacher",
+    students: [
+      "Mr. Michelson",
+    ]
+  }
+];
+
+// ════════════════════════════════════════════
+// PASSCODE SCREEN — INIT
+// ════════════════════════════════════════════
+(function initPasscodeScreen() {
+  const periodSel = document.getElementById('periodSelect');
+  CLASS_ROSTER.forEach((p, i) => {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = p.period;
+    periodSel.appendChild(opt);
+  });
+})();
+
+function onPeriodChange() {
+  const periodIdx = document.getElementById('periodSelect').value;
+  const nameSel   = document.getElementById('nameSelect');
+  const nameWrap  = document.getElementById('nameSelectWrap');
+  const passWrap  = document.getElementById('passcodeWrap');
+  const btn       = document.getElementById('enterBtn');
+  const errEl     = document.getElementById('passcodeError');
+
+  errEl.classList.remove('show');
+  nameSel.innerHTML = '<option value="">— Choose your name —</option>';
+  nameWrap.style.display  = 'none';
+  passWrap.style.display  = 'none';
+  btn.textContent = 'Select your name to continue';
+  btn.disabled = true;
+
+  if (periodIdx === '') return;
+
+  const period = CLASS_ROSTER[parseInt(periodIdx)];
+  period.students.forEach(name => {
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name;
+    nameSel.appendChild(opt);
+  });
+  nameWrap.style.display = 'block';
+  btn.disabled = false;
+  btn.textContent = 'Select your name to continue';
+}
+
+function onNameChange() {
+  const nameVal  = document.getElementById('nameSelect').value;
+  const passWrap = document.getElementById('passcodeWrap');
+  const btn      = document.getElementById('enterBtn');
+  const errEl    = document.getElementById('passcodeError');
+  errEl.classList.remove('show');
+  if (nameVal) {
+    passWrap.style.display = 'block';
+    btn.textContent = 'Enter →';
+    document.getElementById('passcodeInput').value = '';
+    setTimeout(() => document.getElementById('passcodeInput').focus(), 100);
+  } else {
+    passWrap.style.display = 'none';
+    btn.textContent = 'Select your name to continue';
+  }
+}
+
+function togglePassVis() {
+  const inp = document.getElementById('passcodeInput');
+  const btn = document.getElementById('passToggle');
+  if (inp.type === 'password') { inp.type = 'text'; btn.textContent = '🙈'; }
+  else { inp.type = 'password'; btn.textContent = '👁'; }
+}
+
+function handleEnter() {
+  const periodIdx = document.getElementById('periodSelect').value;
+  const nameVal   = document.getElementById('nameSelect').value;
+  const passVal   = document.getElementById('passcodeInput').value; // no trim — case sensitive
+  const errEl     = document.getElementById('passcodeError');
+  errEl.classList.remove('show');
+
+  if (!periodIdx) {
+    errEl.textContent = 'Please select a class period.';
+    errEl.classList.add('show');
+    return;
+  }
+  if (!nameVal) {
+    errEl.textContent = 'Please select your name.';
+    errEl.classList.add('show');
+    return;
+  }
+  if (!passVal) {
+    errEl.textContent = 'Please enter the passcode.';
+    errEl.classList.add('show');
+    document.getElementById('passcodeInput').focus();
+    return;
+  }
+
+  // Teacher passcode — go to dashboard
+  if (passVal === TEACHER_PASSCODE) {
+    document.getElementById('passcodeInput').value = '';
+    loadTeacherView();
+    showScreen('screen-teacher');
+    return;
+  }
+
+  // Student passcode — go to quiz shelf
+  if (passVal === CLASS_PASSCODE) {
+    document.getElementById('passcodeInput').value = '';
+    launchStudent(nameVal, parseInt(periodIdx));
+    return;
+  }
+
+  // Wrong passcode
+  errEl.textContent = 'Incorrect passcode. Try again.';
+  errEl.classList.add('show');
+  document.getElementById('passcodeInput').value = '';
+  document.getElementById('passcodeInput').focus();
+}
+
+document.getElementById('passcodeInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') handleEnter();
+});
+
+// Wire up name select change
+document.getElementById('nameSelect').addEventListener('change', onNameChange);
+
+// ════════════════════════════════════════════
+// NAME / PERIOD DROPDOWN (legacy stub)
+// ════════════════════════════════════════════
+function buildNameScreen() { /* no-op — handled on passcode screen now */ }
+
+// ════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════
+let studentName = '';
+let studentPeriod = '';
+let currentBookId = null;
+let currentQuizIdx = 0;
+let currentQ = 0;
+let answers = [];
+let shuffledQuestions = []; // shuffled question order for this attempt
+let studentAttempts = [];   // loaded from Google Sheets on login
+
+// ── Shuffle helper ──────────────────────────
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// ── Pick a random unused quiz version ───────
+function getNextVersion(bookId) {
+  const taken = getAttempts(bookId).map(a => a.version);
+  const available = [0, 1, 2].filter(v => !taken.includes(v));
+  if (available.length === 0) return null;
+  return available[Math.floor(Math.random() * available.length)];
+}
+
+// ── Attempt helpers ──────────────────────────
+function getAttempts(bookId) {
+  const book = BOOKS.find(b => b.id === bookId);
+  if (!book) return [];
+  return studentAttempts.filter(a => a.book === book.title);
+}
+
+function getTotalPoints() {
+  let pts = 0;
+  BOOKS.forEach(b => {
+    if (getAttempts(b.id).some(a => a.passed)) pts += b.points;
+  });
+  return pts;
+}
+
+function hasPassed(bookId) { return getAttempts(bookId).some(a => a.passed); }
+
+// ── Load student data from Google Sheets ────
+async function loadStudentData(name) {
+  if (!SCRIPT_URL || SCRIPT_URL.includes('YOUR_GOOGLE')) { studentAttempts = []; return; }
+  try {
+    const url = `${SCRIPT_URL}?action=getStudent&name=${encodeURIComponent(name)}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    studentAttempts = data.attempts || [];
+  } catch (e) {
+    console.warn('Could not load from Sheets.', e);
+    studentAttempts = [];
+  }
+}
+
+// ── Save attempt to Google Sheets ───────────
+async function saveAttemptToSheets(bookId, attempt) {
+  const book = BOOKS.find(b => b.id === bookId);
+  studentAttempts.push({ book: book.title, ...attempt });
+  const total = getTotalPoints();
+  const booksPassed = BOOKS.filter(b => hasPassed(b.id)).length;
+  if (!SCRIPT_URL || SCRIPT_URL.includes('YOUR_GOOGLE')) return;
+  try {
+    const params = new URLSearchParams({
+      action:      'saveAttempt',
+      name:        studentName,
+      period:      studentPeriod,
+      book:        book.title,
+      version:     attempt.version,
+      score:       attempt.score,
+      passed:      attempt.passed,
+      points:      book.points,
+      total:       total,
+      booksPassed: booksPassed
+    });
+    await fetch(`${SCRIPT_URL}?${params}`);
+  } catch (e) {
+    console.warn('Could not save to Sheets.', e);
+  }
+}
+
+// ════════════════════════════════════════════
+// SCREENS
+// ════════════════════════════════════════════
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+async function launchStudent(nameVal, periodIdx) {
+  studentName   = nameVal;
+  studentPeriod = CLASS_ROSTER[periodIdx].period;
+  const btn = document.getElementById('enterBtn');
+  btn.textContent = 'Loading...';
+  btn.disabled = true;
+  await loadStudentData(studentName);
+  btn.textContent = 'Enter →';
+  btn.disabled = false;
+  buildShelf();
+  showScreen('screen-shelf');
+}
+
+// Legacy stub — no longer called but kept to avoid errors
+async function startApp() {
+  const periodIdx = document.getElementById('periodSelect').value;
+  const nameVal   = document.getElementById('nameSelect').value;
+  if (periodIdx && nameVal) await launchStudent(nameVal, parseInt(periodIdx));
+}
+
+function buildShelf() {
+  document.getElementById('shelfGreeting').textContent = `${studentPeriod} · ${studentName}`;
+  document.getElementById('totalPoints').textContent = getTotalPoints();
+  const grid = document.getElementById('bookGrid');
+  grid.innerHTML = '';
+  BOOKS.forEach(b => {
+    const passed = hasPassed(b.id);
+    const nextV = getNextVersion(b.id);
+    const attempts = getAttempts(b.id);
+    const allUsed = nextV === null;
+    const div = document.createElement('div');
+    div.className = 'book-item' + (passed ? ' completed' : '');
+    let ptsHTML;
+    if (passed) ptsHTML = `<div class="book-pts earned">✓ ${b.points} pts earned</div>`;
+    else if (attempts.length > 0) ptsHTML = `<div class="book-pts attempted">${b.points} pts — retry</div>`;
+    else ptsHTML = `<div class="book-pts">${b.points} pts</div>`;
+    let vdots = '';
+    if (!passed) {
+      vdots = '<div class="version-dots">';
+      const takenVersions = attempts.map(a => a.version);
+      for (let i = 0; i < 3; i++) {
+        const taken = takenVersions.includes(i);
+        vdots += `<div class="vdot ${taken ? 'taken' : ''}"></div>`;
+      }
+      vdots += '</div>';
+    }
+    div.innerHTML = `<div class="book-emoji">${b.emoji}</div>
+      <div class="book-info">
+        <div class="book-title">${b.title}</div>
+        <div class="book-meta">${b.author} · ${b.pages} pages · Lexile ${b.lexile}${vdots}</div>
+      </div>${ptsHTML}`;
+    if (!passed && !allUsed) div.onclick = () => startQuiz(b.id);
+    else if (allUsed && !passed) div.onclick = () => alert("You've used all 3 quiz versions for this book. Talk to your teacher.");
+    grid.appendChild(div);
+  });
+}
+
+function goShelf() {
+  buildShelf();
+  showScreen('screen-shelf');
+}
+
+function goHome() {
+  // Reset the passcode screen for the next student
+  document.getElementById('periodSelect').value = '';
+  document.getElementById('nameSelect').innerHTML = '<option value="">— Choose your name —</option>';
+  document.getElementById('nameSelectWrap').style.display = 'none';
+  document.getElementById('passcodeWrap').style.display = 'none';
+  document.getElementById('passcodeInput').value = '';
+  document.getElementById('passcodeError').classList.remove('show');
+  document.getElementById('enterBtn').textContent = 'Select your name to continue';
+  document.getElementById('enterBtn').disabled = true;
+  studentName = '';
+  studentPeriod = '';
+  studentAttempts = [];
+  showScreen('screen-passcode');
+}
+
+function showHistory() {
+  const list = document.getElementById('historyList');
+  let html = '';
+  let any = false;
+  BOOKS.forEach(b => {
+    getAttempts(b.id).forEach(a => {
+      any = true;
+      html += `<div class="history-item">
+        <div class="h-icon ${a.passed ? 'h-pass' : 'h-fail'}">${a.passed ? '✓' : '✗'}</div>
+        <div class="h-title">${b.title} <span style="color:var(--muted);font-weight:400;">v${a.version + 1}</span></div>
+        <div class="h-score">${a.score}/10</div>
+        <div class="h-pts ${a.passed ? 'earned' : 'none'}">${a.passed ? '+' + b.points + ' pts' : '—'}</div>
+      </div>`;
+    });
+  });
+  if (!any) html = '<div style="color:var(--muted);font-size:14px;padding:8px 0;">No attempts yet.</div>';
+  list.innerHTML = html;
+  showScreen('screen-history');
+}
+
+// ════════════════════════════════════════════
+// QUIZ LOGIC — with shuffle
+// ════════════════════════════════════════════
+function startQuiz(bookId) {
+  currentBookId = bookId;
+  currentQuizIdx = getNextVersion(bookId);
+  currentQ = 0;
+  answers = [];
+
+  // Shuffle question order
+  const book = BOOKS.find(b => b.id === bookId);
+  const rawQuestions = book.quizzes[currentQuizIdx];
+  // For each question, shuffle the choices and track new correct index
+  shuffledQuestions = shuffle(rawQuestions).map(q => {
+    const indices = shuffle([0, 1, 2, 3]);
+    const newChoices = indices.map(i => q.choices[i]);
+    const newAnswer = indices.indexOf(q.answer);
+    return { q: q.q, choices: newChoices, answer: newAnswer };
+  });
+
+  document.getElementById('quizBookName').textContent = book.title;
+  document.getElementById('quizSub').textContent = `${book.author} · Attempt ${getAttempts(bookId).length + 1}`;
+  renderQuestion();
+  showScreen('screen-quiz');
+}
+
+function retryQuiz() {
+  const nextV = getNextVersion(currentBookId);
+  if (nextV === null) { alert("You've used all 3 quiz versions for this book. Talk to your teacher."); goShelf(); return; }
+  startQuiz(currentBookId);
+}
+
+function renderQuestion() {
+  const q = shuffledQuestions[currentQ];
+  const total = shuffledQuestions.length;
+  document.getElementById('quizSub').textContent =
+    `${BOOKS.find(b => b.id === currentBookId).author} · Question ${currentQ + 1} of ${total}`;
+  document.getElementById('progressFill').style.width = `${(currentQ / total) * 100}%`;
+  const card = document.getElementById('questionCard');
+  card.innerHTML = `
+    <div class="q-num">Question ${currentQ + 1} of ${total}</div>
+    <div class="q-text">${q.q}</div>
+    <div class="choices" id="choices">
+      ${q.choices.map((c, i) => `
+        <button class="choice" onclick="selectChoice(${i})" data-i="${i}">
+          <span class="choice-letter">${['A', 'B', 'C', 'D'][i]}</span>
+          <span>${c}</span>
+        </button>`).join('')}
+    </div>
+    <div class="q-nav"><button class="btn-next" id="nextBtn" onclick="nextQ()">${currentQ < total - 1 ? 'Next →' : 'See results →'}</button></div>`;
+}
+
+function selectChoice(idx) {
+  const q = shuffledQuestions[currentQ];
+  const btns = document.querySelectorAll('.choice');
+  btns.forEach(b => { b.classList.remove('selected'); b.disabled = true; });
+  btns[idx].classList.add('selected');
+  answers.push(idx === q.answer ? 1 : 0);
+  document.getElementById('nextBtn').classList.add('show');
+}
+
+async function nextQ() {
+  currentQ++;
+  if (currentQ >= shuffledQuestions.length) { await showResults(); return; }
+  renderQuestion();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+async function showResults() {
+  const book = BOOKS.find(b => b.id === currentBookId);
+  const score = answers.reduce((a, b) => a + b, 0);
+  const passed = score >= 8;
+  const attempt = { version: currentQuizIdx, score, passed, date: Date.now() };
+  await saveAttemptToSheets(currentBookId, attempt);
+
+  document.getElementById('resScore').textContent = score;
+  document.getElementById('resDenom').textContent = `out of ${shuffledQuestions.length}`;
+  let title, msg;
+  if (passed) { title = '🎉 You passed!'; msg = `Great job proving you read ${book.title}. You've earned your points!`; }
+  else if (score >= 5) { title = 'Almost there!'; msg = `You got ${score}/10. You need 8 to pass. Try again!`; }
+  else { title = 'Keep reading!'; msg = `You got ${score}/10. Spend more time with the book and try again.`; }
+  document.getElementById('resTitle').textContent = title;
+  document.getElementById('resMsg').textContent = msg;
+  const ptsBox = document.getElementById('ptsBox');
+  if (passed) {
+    ptsBox.style.display = 'block';
+    document.getElementById('resPts').textContent = `+${book.points} points`;
+    document.getElementById('resPtsLabel').textContent = `New total: ${getTotalPoints()} pts`;
+  } else { ptsBox.style.display = 'none'; }
+  const nextV = getNextVersion(currentBookId);
+  const retryBtn = document.getElementById('retryBtn');
+  if (nextV === null || passed) retryBtn.style.display = 'none';
+  else { retryBtn.style.display = ''; retryBtn.textContent = `Try again →`; }
+  showScreen('screen-results');
+}
+
+// ════════════════════════════════════════════
+// TEACHER VIEW
+// ════════════════════════════════════════════
+let allStudentData = [];
+
+async function loadTeacherView() {
+  document.getElementById('tvContent').innerHTML =
+    '<div class="tv-empty">Loading class data...</div>';
+  document.getElementById('tvStats').innerHTML = '';
+  if (!SCRIPT_URL || SCRIPT_URL.includes('YOUR_GOOGLE')) {
+    document.getElementById('tvContent').innerHTML =
+      '<div class="tv-empty">Connect Google Sheets to see live data.</div>';
+    return;
+  }
+  try {
+    const res = await fetch(`${SCRIPT_URL}?action=getAllStudents`);
+    const data = await res.json();
+    allStudentData = data.students || [];
+    renderTeacherView();
+  } catch (e) {
+    document.getElementById('tvContent').innerHTML =
+      '<div class="tv-empty">Could not load data. Check your Script URL.</div>';
+  }
+}
+
+function renderTeacherView() {
+  const search = (document.getElementById('tvSearch').value || '').toLowerCase();
+  // Build summary stats
+  const totalStudents = allStudentData.length;
+  const totalAttempts = allStudentData.reduce((s, st) => s + st.attempts, 0);
+  const passing = allStudentData.filter(st => st.booksPassed > 0).length;
+  const topPoints = allStudentData.length
+    ? Math.max(...allStudentData.map(s => s.totalPoints))
+    : 0;
+  document.getElementById('tvStats').innerHTML = `
+    <div class="tv-stat"><div class="tv-stat-num">${totalStudents}</div><div class="tv-stat-label">Students</div></div>
+    <div class="tv-stat"><div class="tv-stat-num">${totalAttempts}</div><div class="tv-stat-label">Total attempts</div></div>
+    <div class="tv-stat"><div class="tv-stat-num">${passing}</div><div class="tv-stat-label">Passed ≥1 book</div></div>
+    <div class="tv-stat"><div class="tv-stat-num">${topPoints}</div><div class="tv-stat-label">Top score</div></div>`;
+
+  // Group by period, sorted alphabetically within each period
+  const grouped = {};
+  CLASS_ROSTER.forEach(p => { grouped[p.period] = []; });
+  grouped['Other'] = [];
+
+  allStudentData.forEach(st => {
+    if (search && !st.name.toLowerCase().includes(search)) return;
+    const period = st.period || 'Other';
+    if (!grouped[period]) grouped[period] = [];
+    grouped[period].push(st);
+  });
+
+  // Also add roster students who have no data yet
+  CLASS_ROSTER.forEach(p => {
+    p.students.forEach(name => {
+      if (search && !name.toLowerCase().includes(search)) return;
+      if (!grouped[p.period].find(s => s.name === name)) {
+        grouped[p.period].push({ name, period: p.period, totalPoints: 0, booksPassed: 0, attempts: 0, lastActive: null });
+      }
+    });
+  });
+
+  let html = '';
+  const periods = [...CLASS_ROSTER.map(p => p.period), 'Other'];
+  periods.forEach(period => {
+    const students = grouped[period];
+    if (!students || students.length === 0) return;
+    students.sort((a, b) => a.name.localeCompare(b.name));
+    html += `<div class="tv-period-group card">
+      <div class="tv-period-label">${period}</div>`;
+    students.forEach(st => {
+      const lastSeen = st.lastActive
+        ? new Date(st.lastActive).toLocaleDateString()
+        : 'No attempts';
+      html += `<div class="tv-row">
+        <div>
+          <div class="tv-name">${st.name}</div>
+          <div class="tv-books">${st.booksPassed} book${st.booksPassed !== 1 ? 's' : ''} passed · ${st.attempts} attempt${st.attempts !== 1 ? 's' : ''} · Last: ${lastSeen}</div>
+        </div>
+        <div class="tv-pts">${st.totalPoints} pts</div>
+      </div>`;
+    });
+    html += `</div>`;
+  });
+  if (!html) html = '<div class="tv-empty">No students match your search.</div>';
+  document.getElementById('tvContent').innerHTML = html;
+}
+</script>
+</body>
+</html>
